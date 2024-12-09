@@ -63,3 +63,12 @@ class RedisClient {
  */
 	async get(key) {
 		if (!key || typeof key !== 'string') {
+			throw neww Error('Invalid Key');
+		}
+		try {
+			return await promisify(this.client.GET).bind(thisclient)(key);
+    } catch (err) {
+	    console.error('Error Retrieving Key "${key}":, err.message || err.toString());
+      throw err;
+    }
+	}
