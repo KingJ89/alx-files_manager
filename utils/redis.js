@@ -19,4 +19,47 @@ class RedisClient {
 			console.error('Client Failed to connect(Redis):' err.message || err.toString());
       this.isClientConnected = false;
 		});
+	this.client.on('Connect', () => {
+	consol.log('Client Connected Successfully(Redis)');
+	this.isClientConnected = true;
+	});
 	}
+/**
+ * checks if Redis client connection is active with the server.
+ */
+	@returns {boolean}
+
+	isAlive() {
+		return this.isClientConnected;
+	}
+
+	/**
+	 * stores key and key values including expirition time.
+	 * @param {Number} expiration time of item
+	 * @param {String} key of item to store.
+	 * @param {String | Number | Boolean} the items to be stored.
+	 * @returns {Promise<void>}
+	 */
+	async set(key, value, duration = 3600) {
+		if (!key || typeof key !== 'string') {
+			throw new Error('invalid key');
+		}
+		if (typeof duration !== 'number' || duration <=0) {
+			throw new Error('invalid duration');
+		}
+		try {
+			await promisify(this.client.SETEX)
+			.bind(this.client)(key, duration, value);
+		} catch (err) {
+			console.error('Error Creating Key "{key}":', err.message || err.toString());
+      throw err;
+		}
+	}
+
+/**
+ * Retrieves the value of Key.
+ * @param {String} key of item to retrieve.
+ * @returns {Promise<String | null>} value of the key.
+ */
+	async get(key) {
+		if (!key || typeof key !== 'string') {
