@@ -72,3 +72,24 @@ class RedisClient {
       throw err;
     }
 	}
+
+	/**
+	 * function removes the value of a key.
+	 * @param {String} key of item to remove.
+	 * @returns {Promise<void>}
+	 */
+	async del(key) {
+		if (!key || typeof key !== 'string') {
+			throw new Error('invalid key');
+		}
+		try {
+			await promisify(this.client.DEL).bind(this.client)(key);
+    } catch (err) {
+	    console.error('Error dlete key "${key}":', err.message || err.toString());
+      throw err;
+    }
+	}
+}
+
+export const redisClient = new RedisClient();
+export default redisClient;
