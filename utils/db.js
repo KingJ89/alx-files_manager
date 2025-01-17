@@ -1,101 +1,67 @@
-import { MongoClient } from 'mongodb';
-import loadEnvironment from './env_loader';
+import mongodb from 'mongodb';
+// eslint-disable-next-line no-unused-vars
+import Collection from 'mongodb/lib/collection';
+import envLoader from './env_loader';
 
 /**
- * Represents a custom MongoDB client.
+ * Represents a MongoDB client.
  */
-class CustomDBClient {
+class DBClient {
   /**
-   * Creates a new CustomDBClient instance.
+   * Creates a new DBClient instance.
    */
   constructor() {
-    loadEnvironment();
-    const dbHost = process.env.CUSTOM_DB_HOST || 'localhost';
-    const dbPort = process.env.CUSTOM_DB_PORT || 27017;
-    const dbName = process.env.CUSTOM_DB_NAME || 'custom_files_manager';
-    const dbConnectionURL = `mongodb://${dbHost}:${dbPort}/${dbName}`;
+    envLoader();
+    const host = process.env.DB_HOST || 'localhost';
+    const port = process.env.DB_PORT || 27017;
+    const database = process.env.DB_DATABASE || 'files_manager';
+    const dbURL = `mongodb://${host}:${port}/${database}`;
 
-    this.mongoClient = new MongoClient(dbConnectionURL, { useUnifiedTopology: true });
-    this.databaseName = dbName;
-    this.initializeConnection();
+    this.client = new mongodb.MongoClient(dbURL, { useUnifiedTopology: true });
+    this.client.connect();
   }
 
   /**
-   * Establishes a connection to the MongoDB server.
-   */
-  async initializeConnection() {
-    try {
-      await this.mongoClient.connect();
-    } catch (error) {
-      console.error('Error connecting to MongoDB:', error);
-      throw error;
-    }
-  }
-
-  /**
-   * Checks if the MongoDB server connection is active.
+   * Check if the client's connection to the MongoDB server is active.
    * @returns {boolean}
    */
-  isConnectionAlive() {
-    return this.mongoClient?.topology?.isConnected() ?? false;
+  isAlive() {
+    return this.client.topology?.isConnected() || false;
   }
 
   /**
-   * Counts documents in a specified collection.
-   * @param {string} collection - The name of the collection.
+   * Retrieves the number of users in the database.
    * @returns {Promise<number>}
    */
-  async countDocumentsInCollection(collection) {
-    try {
-      return await this.mongoClient.db(this.databaseName).collection(collection).countDocuments();
-    } catch (error) {
-      console.error(`Error counting documents in collection ${collection}:`, error);
-      throw error;
-    }
+  async nbUsers() {
+    return this.client.db().collection('users').countDocuments();
   }
 
   /**
-   * Counts the number of users in the database.
+   * Retrieves the number of files in the database.
    * @returns {Promise<number>}
    */
-  async getUserCount() {
-    return this.countDocumentsInCollection('users');
-  }
-
-  /**
-   * Counts the number of files in the database.
-   * @returns {Promise<number>}
-   */
-  async getFileCount() {
-    return this.countDocumentsInCollection('files');
-  }
-
-  /**
-   * Retrieves a reference to a specified collection.
-   * @param {string} collection - The name of the collection.
-   * @returns {Promise<Collection>}
-   */
-  getCollectionReference(collection) {
-    return this.mongoClient.db(this.databaseName).collection(collection);
+  async nbFiles() {
+    return this.client.db().collection('files').countDocuments();
   }
 
   /**
    * Retrieves a reference to the `users` collection.
    * @returns {Promise<Collection>}
    */
-  async getUsersCollection() {
-    return this.getCollectionReference('users');
+  async usersCollection() {
+    return this.client.db().collection('users');
   }
 
   /**
    * Retrieves a reference to the `files` collection.
    * @returns {Promise<Collection>}
    */
-  async getFilesCollection() {
-    return this.getCollectionReference('files');
+  async filesCollection() {
+    return this.client.db().collection('files');
   }
 }
 
-export const customDBClient = new CustomDBClient();
-export default customDBClient;
+export const dbClient = new DBClient();
+export default dbClient;
 
