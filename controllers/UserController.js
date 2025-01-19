@@ -2,61 +2,61 @@ import sha1 from 'sha1';
 import Queue from 'bull/lib/queue';
 import clientDb from '../utils/db';
 
-const emailQueue = new Queue('emailNotifications');
+const userQueue = new Queue('email sending');
 
-export default class UserController {
+export default class UsersController {
   /**
    * Creates a new user.
-   * @param {Request} req - Express request object.
-   * @param {Response} res - Express response object.
+   * @param {Request} req
+   * @param {Response} res
    */
-  static async createUser(req, res) {
-    const { email, password } = req.body || {};
+  static async postNew(req, res) {
+    const email = req.body?.email || null;
+    const password = req.body?.password || null;
 
     if (!email) {
-      return res.status(400).json({ error: 'Email is required' });
+      res.status(400).json({ error: 'Missing email' });
+      return;
     }
-
     if (!password) {
-      return res.status(400).json({ error: 'Password is required' });
+      res.status(400).json({ error: 'Missing password' });
+      return;
     }
 
     try {
-      const usersCollection = await clientDb.usersCollection();
-      const existingUser = await usersCollection.findOne({ email });
+      const user = await (await clientDb.usersCollection()).findOne({ email });
 
-      if (existingUser) {
-        return res.status(400).json({ error: 'User already exists' });
+      if (user) {
+        res.status(400).json({ error: 'Already exist' });
+        return;
       }
 
-      const hashedPassword = sha1(password);
-      const { insertedId } = await usersCollection.insertOne({ email, password: hashedPassword });
+      const insertionInfo = await (await clientDb.usersCollection()).insertOne({
+        email,
+        password: sha1(password),
+      });
+      const userId = insertionInfo.insertedId.toString();
 
-      // Add email notification job to queue
-      emailQueue.add({ userId: insertedId.toString() });
-
-      return res.status(201).json({ id: insertedId.toString(), email });
+      userQueue.add({ userId });
+      res.status(201).json({ email, id: userId });
     } catch (error) {
-      console.error('Error creating user:', error);
-      return res.status(500).json({ error: 'Internal server error' });
+      res.status(500).json({ error: 'Unable to create user', details: error.message });
     }
   }
 
   /**
-   * Retrieves the currently authenticated user.
-   * @param {Request} req - Express request object.
-   * @param {Response} res - Express response object.
+   * Retrieves the authenticated user's details.
+   * @param {Request} req
+   * @param {Response} res
    */
-  static async getCurrentUser(req, res) {
+  static async getMe(req, res) {
     const { user } = req;
 
     if (!user) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      res.status(401).json({ error: 'Unauthorized' });
+      return;
     }
 
-    return res.status(200).json({
-      id: user._id.toString(),
-      email: user.email,
-    });
+    res.status(200).json({ email: user.email, id: user._id.toString() });
   }
 }
